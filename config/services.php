@@ -31,4 +31,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'google' => [
+        'spreadsheets' => [
+            'secret' => env('GOOGLE_APPLICATION_CREDENTIALS'),
+            'uri' => env('GOOGLE_SPREADSHEET_URI'),
+        ],
+    ],
 ];
