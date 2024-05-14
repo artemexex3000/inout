@@ -18,7 +18,7 @@ DB_PASSWORD=
 
 GOOGLE_SPREADSHEET_URI='spreadsheet unique URI, example: 1YY5LNxidmbRarjRQk47NcgJ0UrfnDl4FVA22XVV7BFg'
 ```
-- go to console.cloud.google.com, make and download credentials in json file and place it into the root of project.
+- go to console.cloud.google.com, make and download credentials in json file and place it into the root of project (/project_root/credentials.json).
 - go to console and enter some commands:
 ```console
 composer install
