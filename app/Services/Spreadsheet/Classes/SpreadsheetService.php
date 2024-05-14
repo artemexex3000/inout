@@ -5,7 +5,6 @@ namespace App\Services\Spreadsheet\Classes;
 use App\Services\Spreadsheet\ConnectSheetService;
 use App\Services\Spreadsheet\Interfaces\SpreadsheetServiceInterface;
 use Google\Service\Exception;
-use Illuminate\Support\Facades\Log;
 
 class SpreadsheetService implements SpreadsheetServiceInterface
 {
@@ -13,6 +12,10 @@ class SpreadsheetService implements SpreadsheetServiceInterface
     {
     }
 
+    /**
+     * @param array $collectedData
+     * @return string|null
+     */
     public function saveRecord(array $collectedData): ?string
     {
         $spreadsheetID = config('services.google.spreadsheets.uri');
@@ -37,8 +40,6 @@ class SpreadsheetService implements SpreadsheetServiceInterface
             $values = [
                 $collectedData
             ];
-
-            Log::error($values[0]);
 
             $body = new \Google_Service_Sheets_ValueRange([
                 'values' => $values

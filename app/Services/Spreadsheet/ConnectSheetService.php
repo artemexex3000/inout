@@ -3,10 +3,13 @@
 namespace App\Services\Spreadsheet;
 
 use Google_Client;
-use Mockery\Exception;
 
 class ConnectSheetService
 {
+    /**
+     * Return sheet instance if success
+     * @return string|\Google_Service_Sheets
+     */
     public function sheetInstance(): string|\Google_Service_Sheets
     {
         try {

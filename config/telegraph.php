@@ -30,7 +30,6 @@ return [
          *
          * For reference, see https://docs.defstudio.it/telegraph/webhooks/overview
          */
-//        'handler' => App\Http\Controllers\RowController::class,
         'handler' => \App\Http\Telegram\Handler::class,
 
         /*

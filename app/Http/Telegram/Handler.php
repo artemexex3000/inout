@@ -50,6 +50,7 @@ class Handler extends WebhookHandler
     ];
 
     /**
+     * Initial point
      * @return void
      */
     public function start(): void
@@ -72,6 +73,7 @@ class Handler extends WebhookHandler
     }
 
     /**
+     * Message handler
      * @param Stringable $text
      * @param int|null $uId
      * @return void
@@ -122,6 +124,7 @@ class Handler extends WebhookHandler
     }
 
     /**
+     * Telegram button generator
      * @param int $getKeyOfValue
      * @param int $questionId
      * @param int $userId
@@ -163,6 +166,7 @@ class Handler extends WebhookHandler
     }
 
     /**
+     * Income/outcome choice
      * @param int $getKeyOfValue
      * @param int $questionId
      * @param int $userId
@@ -184,6 +188,7 @@ class Handler extends WebhookHandler
     }
 
     /**
+     * Save/clean choice
      * @param int $getKeyOfValue
      * @param int $questionId
      * @return void
@@ -200,6 +205,7 @@ class Handler extends WebhookHandler
     }
 
     /**
+     * Print all chosen variants to google spreadsheet
      * @param $userId
      * @return void
      * @throws BindingResolutionException
@@ -224,6 +230,7 @@ class Handler extends WebhookHandler
     }
 
     /**
+     * Method for saving buttons' values
      * @param $value
      * @param $key
      * @param $userId
@@ -245,6 +252,7 @@ class Handler extends WebhookHandler
     }
 
     /**
+     * Start over
      * @return void
      */
     public function again(): void
@@ -253,6 +261,7 @@ class Handler extends WebhookHandler
     }
 
     /**
+     * Handle unknown command from telegram
      * @param Stringable $text
      * @return void
      */
