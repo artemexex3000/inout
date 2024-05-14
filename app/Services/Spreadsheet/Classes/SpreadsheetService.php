@@ -2,6 +2,7 @@
 
 namespace App\Services\Spreadsheet\Classes;
 
+use App\Models\User;
 use App\Services\Spreadsheet\ConnectSheetService;
 use App\Services\Spreadsheet\Interfaces\SpreadsheetServiceInterface;
 use Google\Service\Exception;
@@ -16,9 +17,9 @@ class SpreadsheetService implements SpreadsheetServiceInterface
      * @param array $collectedData
      * @return string|null
      */
-    public function saveRecord(array $collectedData): ?string
+    public function saveRecord(array $collectedData, $userId = null): ?string
     {
-        $spreadsheetID = config('services.google.spreadsheets.uri');
+        $spreadsheetID = User::where('telegram_user_id', '=', $userId)->first()->table_id;
 
         try {
             $numberOfCell = 2;

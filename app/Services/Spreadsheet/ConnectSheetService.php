@@ -19,7 +19,6 @@ class ConnectSheetService
             $client->setScopes([\Google_Service_Sheets::SPREADSHEETS]);
             $client->setAccessType('offline');
             $client->setAuthConfig(base_path('credentials.json'));
-
             return new \Google_Service_Sheets($client);
         } catch (\Google\Exception $e) {
             return $e->getMessage() . ' ' . $e->getLine() . ' ' . $e->getFile() . ' ' . $e->getCode();

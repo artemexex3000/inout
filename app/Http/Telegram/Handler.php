@@ -2,11 +2,12 @@
 
 namespace App\Http\Telegram;
 
+use App\Models\User;
 use App\Services\Spreadsheet\Interfaces\SpreadsheetServiceInterface;
 use DefStudio\Telegraph\{Facades\Telegraph, Handlers\WebhookHandler, Keyboard\Button, Keyboard\Keyboard};
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\{Log, Redis};
+use Illuminate\Support\Facades\{DB, Log, Redis};
 use Illuminate\Support\Stringable;
 
 
@@ -58,6 +59,38 @@ class Handler extends WebhookHandler
         if (is_null(Redis::get('userId'))) {
             Redis::set('userId', $this->message->from()->id());
         }
+
+        if (User::where('telegram_user_id', '=', $this->message->from()->id())->count() === 0) {
+            User::insert([
+                    'telegram_user_id' => $this->message->from()->id()
+                ]);
+        }
+
+        Telegraph::message('Внесите ID вашей таблицы командой /addTable *table_id*')->send();
+    }
+
+    /**
+     * Adding table
+     * @param $tableId
+     * @return void
+     */
+    public function addTable($tableId)
+    {
+        User::where('telegram_user_id', 'like', $this->message->from()->id())
+            ->first()
+            ->update([
+                'table_id' => $tableId
+            ]);
+
+        Telegraph::message('Готово! Чтобы начать работу, используйте команду /insert')->send();
+    }
+
+    /**
+     * Initial insert method
+     * @return void
+     */
+    public function insert()
+    {
 
         $userId = Redis::get('userId');
 
@@ -220,13 +253,13 @@ class Handler extends WebhookHandler
             Redis::command("get", ["user:$userId:answer:1"]), // статья расходов
             (int)Redis::command("get", ["user:$userId:answer:2"]) ? Redis::command("get", ["user:$userId:answer:0"]) : 0,
             (int)Redis::command("get", ["user:$userId:answer:2"]) ? 0 : Redis::command("get", ["user:$userId:answer:0"]),
-        ]);
+        ], $userId);
 
         $keys = Redis::command('keys', ["user:$userId:*"]);
         foreach ($keys as $key) {
             Redis::command('del', [$key]);
         }
-        $this->start();
+        $this->insert();
     }
 
     /**
@@ -257,7 +290,7 @@ class Handler extends WebhookHandler
      */
     public function again(): void
     {
-        $this->start();
+        $this->insert();
     }
 
     /**

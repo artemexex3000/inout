@@ -6,7 +6,8 @@ interface SpreadsheetServiceInterface
 {
     /**
      * @param array $collectedData
+     * @param null $userId
      * @return string|null
      */
-    public function saveRecord(array $collectedData): ?string;
+    public function saveRecord(array $collectedData, $userId = null): ?string;
 }
