@@ -27,8 +27,5 @@ class TestCommand extends Command
      */
     public function handle()
     {
-        $spread = new SpreadsheetService(new ConnectSheetService());
-
-        $spread->saveRecord([], 756580021);
     }
 }

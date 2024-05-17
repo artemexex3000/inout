@@ -1,17 +1,18 @@
 <?php
 
-namespace App\Http\Telegram;
+namespace App\Handlers;
 
+use App\Enums\QuestionsWithVariants;
 use App\Models\User;
+use App\Services\Spreadsheet\Classes\SpreadsheetService;
 use App\Services\Spreadsheet\Interfaces\SpreadsheetServiceInterface;
 use DefStudio\Telegraph\{Facades\Telegraph, Handlers\WebhookHandler, Keyboard\Button, Keyboard\Keyboard};
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\{DB, Log, Redis};
+use Illuminate\Support\Facades\{Log, Redis};
 use Illuminate\Support\Stringable;
 
-
-class Handler extends WebhookHandler
+class TelegramHandler extends WebhookHandler
 {
     /**
      * Question list
@@ -39,16 +40,19 @@ class Handler extends WebhookHandler
     ];
 
     /**
-     * The second question's variants list
+     * Get integer value from button question
      *
-     * @var array
+     * @param QuestionsWithVariants $questionsWithVariants
+     * @return int
      */
-    private const SECOND_QUESTION_VARIANTS = [
-        'ЗП - менеджеры', 'ЗП - тех. отдел', 'ЗП - IT отдел', 'ЗП - контент', 'ЗП - бухгалтерия', 'ЗП - юр. отдел',
-        'Номера рассылок', 'Офис', 'Расходники', 'ПО и сервера', 'Реклама', 'Техника', 'Телефония', 'Неофиц. кабинет',
-        'Налог', 'ДРУГОЕ', 'Официальная', 'ОСОБАЯ', 'Пополнение Офиц. кабинета', 'База', 'СМС', 'Пополнение Online',
-        'Чат реклама', 'ПРИГЛАШЕНИЕ', 'База Сообщества', 'База Возраст', 'ПРИГЛАШЕНИЕ S', 'ПРИГЛАШЕНИЕ M',
-    ];
+    public function getQuestion(QuestionsWithVariants $questionsWithVariants): int
+    {
+        return match ($questionsWithVariants) {
+            QuestionsWithVariants::FirstButtonQuestion => 1,
+            QuestionsWithVariants::SecondButtonQuestion => 2,
+            QuestionsWithVariants::ThirdButtonQuestion => 5,
+        };
+    }
 
     /**
      * Initial point
@@ -60,10 +64,10 @@ class Handler extends WebhookHandler
             Redis::set('userId', $this->message->from()->id());
         }
 
-        if (User::where('telegram_user_id', '=', $this->message->from()->id())->count() === 0) {
+        if (User::where('telegram_user_id', $this->message->from()->id())->count() === 0) {
             User::insert([
-                    'telegram_user_id' => $this->message->from()->id()
-                ]);
+                'telegram_user_id' => $this->message->from()->id()
+            ]);
         }
 
         Telegraph::message('Внесите ID вашей таблицы командой /addTable *table_id*')->send();
@@ -76,7 +80,7 @@ class Handler extends WebhookHandler
      */
     public function addTable($tableId)
     {
-        User::where('telegram_user_id', 'like', $this->message->from()->id())
+        User::where('telegram_user_id', $this->message->from()->id())
             ->first()
             ->update([
                 'table_id' => $tableId
@@ -134,15 +138,15 @@ class Handler extends WebhookHandler
         Redis::set("user:$userId:question", $nextQuestionKey);
 
         if (in_array($nextQuestion, self::QUESTIONS_WITH_VARIANTS)) {
-            if (1 === (int)$getKeyOfValue) {
+            if ($this->getQuestion(QuestionsWithVariants::FirstButtonQuestion) === (int)$getKeyOfValue) {
                 $this->expenseItemList((int)$getKeyOfValue, $questionId, $userId);
             }
 
-            if (2 === (int)$getKeyOfValue) {
+            if ($this->getQuestion(QuestionsWithVariants::SecondButtonQuestion) === (int)$getKeyOfValue) {
                 $this->statusList((int)$getKeyOfValue, $questionId, $userId);
             }
 
-            if (5 === (int)$getKeyOfValue) {
+            if ($this->getQuestion(QuestionsWithVariants::ThirdButtonQuestion) === (int)$getKeyOfValue) {
                 $this->agreeList((int)$getKeyOfValue, $questionId);
             }
 
@@ -162,40 +166,24 @@ class Handler extends WebhookHandler
      * @param int $questionId
      * @param int $userId
      * @return void
+     * @throws \JsonException
      */
     private function expenseItemList(int $getKeyOfValue, int $questionId, int $userId): void
     {
+        $setOfQuestions = [];
+
+        foreach (SpreadsheetService::getConditionElements($userId) as $key => $value) {
+            $setOfQuestions[$key] = Button::make($value)
+                ->action('saveData')
+                ->param('value', $key)
+                ->param('userId', $userId)
+                ->param('key', $questionId);
+        }
+
         Telegraph::message(self::QUESTIONS[$getKeyOfValue])
-            ->keyboard(Keyboard::make()->buttons([
-                Button::make('ЗП - менеджеры')->action('saveData')->param('value', 0)->param('userId', $userId)->param('key', $questionId),
-                Button::make('ЗП - тех. отдел')->action('saveData')->param('value', 1)->param('userId', $userId)->param('key', $questionId),
-                Button::make('ЗП - IT отдел')->action('saveData')->param('value', 2)->param('userId', $userId)->param('key', $questionId),
-                Button::make('ЗП - контент')->action('saveData')->param('value', 3)->param('userId', $userId)->param('key', $questionId),
-                Button::make('ЗП - бухгалтерия')->action('saveData')->param('value', 4)->param('userId', $userId)->param('key', $questionId),
-                Button::make('ЗП - юр. отдел')->action('saveData')->param('value', 5)->param('userId', $userId)->param('key', $questionId),
-                Button::make('Номера рассылок')->action('saveData')->param('value', 6)->param('userId', $userId)->param('key', $questionId),
-                Button::make('Офис')->action('saveData')->param('value', 7)->param('userId', $userId)->param('key', $questionId),
-                Button::make('Расходники')->action('saveData')->param('value', 8)->param('userId', $userId)->param('key', $questionId),
-                Button::make('ПО и сервера')->action('saveData')->param('value', 9)->param('userId', $userId)->param('key', $questionId),
-                Button::make('Реклама')->action('saveData')->param('value', 10)->param('userId', $userId)->param('key', $questionId),
-                Button::make('Техника')->action('saveData')->param('value', 11)->param('userId', $userId)->param('key', $questionId),
-                Button::make('Телефония')->action('saveData')->param('value', 12)->param('userId', $userId)->param('key', $questionId),
-                Button::make('Неофиц. кабинет')->action('saveData')->param('value', 13)->param('userId', $userId)->param('key', $questionId),
-                Button::make('Налог')->action('saveData')->param('value', 14)->param('userId', $userId)->param('key', $questionId),
-                Button::make('ДРУГОЕ')->action('saveData')->param('value', 15)->param('userId', $userId)->param('key', $questionId),
-                Button::make('Официальная')->action('saveData')->param('value', 16)->param('userId', $userId)->param('key', $questionId),
-                Button::make('ОСОБАЯ')->action('saveData')->param('value', 17)->param('userId', $userId)->param('key', $questionId),
-                Button::make('Пополнение Офиц. кабинета')->action('saveData')->param('value', 18)->param('user_id', $userId)->param('key', $questionId),
-                Button::make('База')->action('saveData')->param('value', 19)->param('userId', $userId)->param('key', $questionId),
-                Button::make('СМС')->action('saveData')->param('value', 20)->param('userId', $userId)->param('key', $questionId),
-                Button::make('Пополнение Online')->action('saveData')->param('value', 21)->param('userId', $userId)->param('key', $questionId),
-                Button::make('Чат реклама')->action('saveData')->param('value', 22)->param('userId', $userId)->param('key', $questionId),
-                Button::make('ПРИГЛАШЕНИЕ')->action('saveData')->param('value', 23)->param('userId', $userId)->param('key', $questionId),
-                Button::make('База Сообщества')->action('saveData')->param('value', 24)->param('userId', $userId)->param('key', $questionId),
-                Button::make('База Возраст')->action('saveData')->param('value', 25)->param('userId', $userId)->param('key', $questionId),
-                Button::make('ПРИГЛАШЕНИЕ S')->action('saveData')->param('value', 26)->param('userId', $userId)->param('key', $questionId),
-                Button::make('ПРИГЛАШЕНИЕ M')->action('saveData')->param('value', 27)->param('userId', $userId)->param('key', $questionId),
-            ]))->send();
+            ->keyboard(Keyboard::make()->buttons(
+                $setOfQuestions
+            ))->send();
     }
 
     /**
@@ -209,11 +197,11 @@ class Handler extends WebhookHandler
     {
         Telegraph::message(self::QUESTIONS[$getKeyOfValue])
             ->keyboard(Keyboard::make()->buttons([
-                Button::make('Приток')->action('saveData')
+                Button::make('Приход')->action('saveData')
                     ->param('value', 0)
                     ->param('userId', $userId)
                     ->param('key', $questionId),
-                Button::make('Убыток')->action('saveData')
+                Button::make('Расход')->action('saveData')
                     ->param('value', 1)
                     ->param('userId', $userId)
                     ->param('key', $questionId)
@@ -271,17 +259,18 @@ class Handler extends WebhookHandler
      */
     public function saveData($value, $key, $userId): void
     {
-        Log::error($key);
         if (1 === (int)$key) {
-            $newValue = self::SECOND_QUESTION_VARIANTS[(int)$value];
+            $newValue = SpreadsheetService::getConditionElements($userId)[(int)$value];
             Redis::set("user:{$userId}:answer:{$key}", $newValue);
-        }
-        if (2 === (int)$key) {
-            Redis::set("user:{$userId}:answer:{$key}", (int)$value);
+
+            $this->handleChatMessage(new Stringable(''), $userId);
+
+            return;
         }
 
-        $stringable = new Stringable('');
-        $this->handleChatMessage($stringable, $userId);
+        Redis::set("user:{$userId}:answer:{$key}", (int)$value);
+
+        $this->handleChatMessage(new Stringable(''), $userId);
     }
 
     /**
