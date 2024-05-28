@@ -7,6 +7,7 @@ use App\Services\Spreadsheet\ConnectSheetService;
 use App\Services\Spreadsheet\Interfaces\SpreadsheetServiceInterface;
 use Google\Service\Exception;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class SpreadsheetService implements SpreadsheetServiceInterface
 {
@@ -24,23 +25,37 @@ class SpreadsheetService implements SpreadsheetServiceInterface
         $spreadsheetID = User::where('telegram_user_id', $userId)->first()->table_id;
 
         try {
-            $numberOfCell = 2;
-            $range = "logging!A$numberOfCell:E$numberOfCell";
-
             $service = $this->connectSheetService->sheetInstance();
 
+            $dataFromTable = $service->spreadsheets_values->get($spreadsheetID, "Лист1!A:K")->getValues();
+
+            end($dataFromTable);
+            $numberOfCell = (int)key($dataFromTable) + 2;
+
             $values = [
-                $collectedData
+                ['A' . $numberOfCell, $collectedData[0]],
+                ['B' . $numberOfCell, $collectedData[1]],
+                ['G' . $numberOfCell, $collectedData[2]],
+                ['H' . $numberOfCell, (int)$collectedData[4]],
+                ['I' . $numberOfCell, (int)$collectedData[3]],
             ];
 
-            $body = new \Google_Service_Sheets_ValueRange([
-                'values' => $values
-            ]);
-            $params = [
-                'valueInputOption' => 'RAW'
-            ];
+            foreach ($values as $cellData) {
+                $cell = $cellData[0];
+                $data = $cellData[1];
 
-            $service->spreadsheets_values->append($spreadsheetID, $range, $body, $params);
+                $range = "Лист1!" . $cell;
+
+                $body = new \Google_Service_Sheets_ValueRange([
+                    'values' => [[$data]]
+                ]);
+
+                $params = [
+                    'valueInputOption' => 'RAW'
+                ];
+
+                $service->spreadsheets_values->append($spreadsheetID, $range, $body, $params);
+            }
 
             return '';
         } catch (Exception $e) {
@@ -61,7 +76,7 @@ class SpreadsheetService implements SpreadsheetServiceInterface
 
         $httpClient = $client->authorize();
 
-        $response = $httpClient->get("https://sheets.googleapis.com/v4/spreadsheets/$spreadsheetID?includeGridData=true&ranges=logging!C2");
+        $response = $httpClient->get("https://sheets.googleapis.com/v4/spreadsheets/$spreadsheetID?includeGridData=true&ranges=Лист1!G5");
 
         $jsonResp = json_decode((string)$response->getBody(), true, 512, JSON_THROW_ON_ERROR);
 
