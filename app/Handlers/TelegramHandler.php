@@ -60,6 +60,8 @@ class TelegramHandler extends WebhookHandler
      */
     public function start(): void
     {
+        Redis::set('userId', $this->message->from()->id());
+
         if (is_null(Redis::get('userId'))) {
             Redis::set('userId', $this->message->from()->id());
         }
@@ -70,7 +72,7 @@ class TelegramHandler extends WebhookHandler
             ]);
         }
 
-        Telegraph::message('Внесите ID вашей таблицы командой /addTable *table_id*')->send();
+        Telegraph::chat($this->chat->chat_id)->message('Внесите ID вашей таблицы командой /addTable *table_id*')->send();
     }
 
     /**
@@ -86,7 +88,7 @@ class TelegramHandler extends WebhookHandler
                 'table_id' => $tableId
             ]);
 
-        Telegraph::message('Готово! Чтобы начать работу, используйте команду /insert')->send();
+        Telegraph::chat($this->chat->chat_id)->message('Готово! Чтобы начать работу, используйте команду /insert')->send();
     }
 
     /**
@@ -95,6 +97,9 @@ class TelegramHandler extends WebhookHandler
      */
     public function insert()
     {
+        if (is_null(Redis::get('userId'))) {
+            Redis::set('userId', $this->message->from()->id());
+        }
 
         $userId = Redis::get('userId');
 
@@ -106,7 +111,7 @@ class TelegramHandler extends WebhookHandler
 
         Redis::set("user:$userId:question", 0);
 
-        Telegraph::message(self::QUESTIONS[0])->send();
+        Telegraph::chat($this->chat->chat_id)->message(self::QUESTIONS[0])->send();
     }
 
     /**
@@ -114,6 +119,7 @@ class TelegramHandler extends WebhookHandler
      * @param Stringable $text
      * @param int|null $uId
      * @return void
+     * @throws \JsonException
      */
     protected function handleChatMessage(Stringable $text, ?int $uId = null): void
     {
@@ -157,7 +163,7 @@ class TelegramHandler extends WebhookHandler
             $this->reply('done');
         }
 
-        Telegraph::message(Arr::get(self::QUESTIONS, $nextQuestionKey, ''))->send();
+        Telegraph::chat($this->chat->chat_id)->message(Arr::get(self::QUESTIONS, $nextQuestionKey, ''))->send();
     }
 
     /**
@@ -180,7 +186,7 @@ class TelegramHandler extends WebhookHandler
                 ->param('key', $questionId);
         }
 
-        Telegraph::message(self::QUESTIONS[$getKeyOfValue])
+        Telegraph::chat($this->chat->chat_id)->message(self::QUESTIONS[$getKeyOfValue])
             ->keyboard(Keyboard::make()->buttons(
                 $setOfQuestions
             ))->send();
@@ -195,7 +201,7 @@ class TelegramHandler extends WebhookHandler
      */
     private function statusList(int $getKeyOfValue, int $questionId, int $userId): void
     {
-        Telegraph::message(self::QUESTIONS[$getKeyOfValue])
+        Telegraph::chat($this->chat->chat_id)->message(self::QUESTIONS[$getKeyOfValue])
             ->keyboard(Keyboard::make()->buttons([
                 Button::make('Приход')->action('saveData')
                     ->param('value', 0)
@@ -216,7 +222,7 @@ class TelegramHandler extends WebhookHandler
      */
     private function agreeList(int $getKeyOfValue, int $questionId): void
     {
-        Telegraph::message(self::QUESTIONS[$getKeyOfValue])
+        Telegraph::chat($this->chat->chat_id)->message(self::QUESTIONS[$getKeyOfValue])
             ->keyboard(Keyboard::make()->buttons([
                 Button::make('Сохранить')->action('saveToTable')
                     ->param('userId', Redis::get('userId')),
